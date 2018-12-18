@@ -20,30 +20,43 @@ from collections import defaultdict
 
 
 class LazyEntityMeta(type):
-    def __new__(mcs, name, bases, attrs):
-        if name in mcs._entities:
+    def __new__(mcs, name, bases, attrs, database=None):
+        if database not in mcs._entities:
+            mcs._entities[database] = {}
+            mcs._reverse[database] = {}
+        if name in mcs._entities[database]:
             raise TypeError('Entity already exists')
 
         for k, v in attrs.items():
             if isinstance(v, DoubleLink):
                 r = v.reverse
                 v = v.attr
-                if v.py_type in mcs._entities:
-                    mcs._entities[v.py_type].attrs[v.reverse] = r
+                if v.py_type in mcs._entities[database]:
+                    mcs._entities[database][v.py_type].attrs[v.reverse] = r
                 else:
-                    mcs._reverse[v.py_type][v.reverse] = r
+                    mcs._reverse[database][v.py_type][v.reverse] = r
                 attrs[k] = v
 
-        if name in mcs._reverse:
-            for k, v in mcs._reverse.pop(name).items():
+        if name in mcs._reverse[database]:
+            for k, v in mcs._reverse[database].pop(name).items():
                 attrs[k] = v
 
-        entity = mcs._entities[name] = LazyEntity(bases, attrs)
+        entity = mcs._entities[database][name] = LazyEntity(bases, attrs)
         return entity
 
     @classmethod
-    def attach(mcs, db, schema=None):
-        for name, lazy in mcs._entities.items():
+    def attach(mcs, db, schema=None, database=None):
+        """
+
+        :param db: Database() object
+        :param schema: schema name. useful for postgres
+        :param database: need for separation of Database() objects. By default all entities will be in single Database.
+        pass database argument in class definition for grouping entities.
+
+        class A(metaclass=LazyEntityMeta, database='db1'):
+            pass
+        """
+        for name, lazy in mcs._entities[database].items():
             if schema in lazy.databases:
                 raise RuntimeError('schema already attached')
             attrs = lazy.attrs.copy()
