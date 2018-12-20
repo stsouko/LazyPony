@@ -17,7 +17,8 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
-from pony.orm.core import Collection
+from itertools import chain
+from pony.orm.core import Attribute, Collection
 from warnings import warn
 
 
@@ -62,6 +63,13 @@ class LazyEntityMeta(type):
             if schema in lazy.databases:
                 raise RuntimeError('schema already attached')
             attrs = lazy.attrs.copy()
+            for k, v in attrs.items():
+                if isinstance(v, Attribute):  # deepcopy not working
+                    cv = Attribute.__new__(type(v))
+                    for a in chain.from_iterable(getattr(cls, '__slots__', []) for cls in type(v).__mro__):
+                        if hasattr(v, a):
+                            setattr(cv, a, getattr(v, a))
+                    attrs[k] = cv
             if schema:
                 if '_table_' in attrs:
                     attrs['_table_'] = (schema, attrs['_table_'])
