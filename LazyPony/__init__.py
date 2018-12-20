@@ -17,6 +17,8 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
+from pony.orm.core import Collection
+from warnings import warn
 
 
 class LazyEntityMeta(type):
@@ -65,7 +67,15 @@ class LazyEntityMeta(type):
                     attrs['_table_'] = (schema, attrs['_table_'])
                 else:
                     attrs['_table_'] = (schema, name)
-            lazy.databases[schema] = type(name, lazy.bases + (db.Entity,), attrs)
+                for k, v in attrs.items():
+                    # if schemas used, need predefined name of m2m table.
+                    if isinstance(v, Collection):
+                        if v.table:
+                            v.table = (schema, v.table)
+                        else:
+                            warn('for many-to-many relationship if schema used NEED to define m2m table name')
+
+            lazy.databases[schema] = type(name, (db.Entity, *lazy.bases), attrs)
 
     _entities = {}
     _reverse = defaultdict(dict)
