@@ -36,8 +36,10 @@ class LazyEntityMeta(type):
                 v = v.attr
                 if v.py_type in mcs._entities[database]:
                     mcs._entities[database][v.py_type].attrs[v.reverse] = r
-                else:
+                elif v.py_type in mcs._reverse[database]:
                     mcs._reverse[database][v.py_type][v.reverse] = r
+                else:
+                    mcs._reverse[database][v.py_type] = {v.reverse: r}
                 attrs[k] = v
 
         if name in mcs._reverse[database]:
@@ -62,6 +64,7 @@ class LazyEntityMeta(type):
         for name, lazy in mcs._entities[database].items():
             if schema in lazy.databases:
                 raise RuntimeError('schema already attached')
+
             attrs = lazy.attrs.copy()
             for k, v in attrs.items():
                 if isinstance(v, Attribute):  # deepcopy not working
@@ -70,9 +73,11 @@ class LazyEntityMeta(type):
                         if hasattr(v, a):
                             setattr(cv, a, getattr(v, a))
                     attrs[k] = cv
+
             if schema:
                 if '_table_' in attrs:
-                    attrs['_table_'] = (schema, attrs['_table_'])
+                    if not isinstance(attrs['_table_'], tuple):  # if tuple: schema hardcoded
+                        attrs['_table_'] = (schema, attrs['_table_'])
                 else:
                     attrs['_table_'] = (schema, name)
                 for k, v in attrs.items():
