@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-#  Copyright 2018 Ramil Nugmanov <stsouko@live.ru>
+#  Copyright 2018, 2019 Ramil Nugmanov <stsouko@live.ru>
 #  This file is part of LazyPony.
 #
 #  LazyPony is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@ from pathlib import Path
 from setuptools import setup
 
 
-version = '0.1.0'
+version = '0.1.1'
 
 
 setup(
@@ -33,7 +33,7 @@ setup(
     author='Dr. Ramil Nugmanov',
     author_email='stsouko@live.ru',
     python_requires='>=3.6.7',
-    install_requires=['pony>=0.7.6'],
+    install_requires=['pony>=0.7.9'],
     long_description=(Path(__file__).parent / 'README.md').open().read(),
     classifiers=['Environment :: Plugins',
                  'Intended Audience :: Developers',

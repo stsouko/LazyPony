@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  Copyright 2018 Ramil Nugmanov <stsouko@live.ru>
+#  Copyright 2018, 2019 Ramil Nugmanov <stsouko@live.ru>
 #  This file is part of LazyPony.
 #
 #  LazyPony is free software; you can redistribute it and/or modify
@@ -66,13 +66,16 @@ class LazyEntityMeta(type):
                 raise RuntimeError('schema already attached')
 
             attrs = lazy.attrs.copy()
-            for k, v in attrs.items():
-                if isinstance(v, Attribute):  # deepcopy not working
-                    cv = Attribute.__new__(type(v))
-                    for a in chain.from_iterable(getattr(cls, '__slots__', []) for cls in type(v).__mro__):
-                        if hasattr(v, a):
-                            setattr(cv, a, getattr(v, a))
-                    attrs[k] = cv
+            for attrs_key, attrs_value in attrs.items():
+                if isinstance(attrs_value, Attribute):  # deepcopy not working
+                    copy_attrs_value = Attribute.__new__(type(attrs_value))
+                    for key in chain.from_iterable(getattr(cls, '__slots__', []) for cls in type(attrs_value).__mro__):
+                        if hasattr(attrs_value, key):
+                            value = getattr(attrs_value, key)
+                            if isinstance(value, dict):
+                                value = value.copy()
+                            setattr(copy_attrs_value, key, value)
+                    attrs[attrs_key] = copy_attrs_value
 
             if schema:
                 if '_table_' in attrs:
