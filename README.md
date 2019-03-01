@@ -25,20 +25,4 @@ example:
 
     from file1 import A
     
-    query = A[None].select()
-
-
-if schema is set in LazyEntityMeta.attach
-
-    query = A[schema].select()
-
-possible to attach to models multiple schemas
-
-    db1 = Database()
-    LazyEntityMeta.attach(db1, 'schema1')
-    
-    db2 = Database()
-    LazyEntityMeta.attach(db2, 'schema2')
-    
-    db3 = Database()
-    LazyEntityMeta.attach(db3, 'schema3')
+    query = A.select()

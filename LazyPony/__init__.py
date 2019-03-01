@@ -17,13 +17,12 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
-from itertools import chain
-from pony.orm.core import Attribute, Collection
+from pony.orm.core import Collection
 from warnings import warn
 
 
 class LazyEntityMeta(type):
-    def __new__(mcs, name, bases, attrs, database=None):
+    def __new__(mcs, name, parents, attrs, database=None):
         if database not in mcs._entities:
             mcs._entities[database] = {}
             mcs._reverse[database] = {}
@@ -35,7 +34,7 @@ class LazyEntityMeta(type):
                 r = v.reverse
                 v = v.attr
                 if v.py_type in mcs._entities[database]:
-                    mcs._entities[database][v.py_type].attrs[v.reverse] = r
+                    mcs._entities[database][v.py_type].__attrs__[v.reverse] = r
                 elif v.py_type in mcs._reverse[database]:
                     mcs._reverse[database][v.py_type][v.reverse] = r
                 else:
@@ -46,7 +45,7 @@ class LazyEntityMeta(type):
             for k, v in mcs._reverse[database].pop(name).items():
                 attrs[k] = v
 
-        entity = mcs._entities[database][name] = LazyEntity(bases, attrs)
+        entity = mcs._entities[database][name] = LazyEntity(parents, attrs)
         return entity
 
     @classmethod
@@ -62,21 +61,10 @@ class LazyEntityMeta(type):
             pass
         """
         for name, lazy in mcs._entities[database].items():
-            if schema in lazy.databases:
-                raise RuntimeError('schema already attached')
+            if hasattr(lazy, 'entity'):
+                raise RuntimeError('entity already attached')
 
-            attrs = lazy.attrs.copy()
-            for attrs_key, attrs_value in attrs.items():
-                if isinstance(attrs_value, Attribute):  # deepcopy not working
-                    copy_attrs_value = Attribute.__new__(type(attrs_value))
-                    for key in chain.from_iterable(getattr(cls, '__slots__', []) for cls in type(attrs_value).__mro__):
-                        if hasattr(attrs_value, key):
-                            value = getattr(attrs_value, key)
-                            if isinstance(value, dict):
-                                value = value.copy()
-                            setattr(copy_attrs_value, key, value)
-                    attrs[attrs_key] = copy_attrs_value
-
+            attrs = lazy.__attrs__
             if schema:
                 if '_table_' in attrs:
                     if not isinstance(attrs['_table_'], tuple):  # if tuple: schema hardcoded
@@ -91,7 +79,7 @@ class LazyEntityMeta(type):
                         else:
                             warn('for many-to-many relationship if schema used NEED to define m2m table name')
 
-            lazy.databases[schema] = type(name, (db.Entity, *lazy.bases), attrs)
+            lazy.entity = type(name, (db.Entity, *lazy.__parents__), attrs)
 
     _entities = {}
     _reverse = defaultdict(dict)
@@ -106,10 +94,47 @@ class DoubleLink:
 
 
 class LazyEntity:
+    __slots__ = ('__parents__', '__attrs__', 'entity')
+
     def __init__(self, bases, attrs):
-        self.bases = bases
-        self.attrs = attrs
-        self.databases = {}
+        self.__parents__ = bases
+        self.__attrs__ = attrs
+
+    def __call__(self, *args, **kwargs):
+        return self.entity(*args, **kwargs)
 
     def __getitem__(self, item):
-        return self.databases[item]
+        return self.entity[item]
+
+    def __repr__(self):
+        return repr(self.entity)
+
+    def __str__(self):
+        return str(self.entity)
+
+    def describe(self):
+        return self.entity.describe()
+
+    def drop_table(self, *args, **kwargs):
+        return self.entity.drop_table(*args, **kwargs)
+
+    def exists(self, *args, **kwargs):
+        return self.entity.exists(*args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        return self.entity.get(*args, **kwargs)
+
+    def get_by_sql(self, *args, **kwargs):
+        return self.entity.get_by_sql(*args, **kwargs)
+
+    def get_for_update(self, *args, **kwargs):
+        return self.entity.get_for_update(*args, **kwargs)
+
+    def select(self, *args, **kwargs):
+        return self.entity.select(*args, **kwargs)
+
+    def select_by_sql(self, *args, **kwargs):
+        return self.entity.select_by_sql(*args, **kwargs)
+
+    def select_random(self, *args, **kwargs):
+        return self.entity.select_random(*args, **kwargs)
