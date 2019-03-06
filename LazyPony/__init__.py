@@ -112,29 +112,7 @@ class LazyEntity:
     def __str__(self):
         return str(self.entity)
 
-    def describe(self):
-        return self.entity.describe()
-
-    def drop_table(self, *args, **kwargs):
-        return self.entity.drop_table(*args, **kwargs)
-
-    def exists(self, *args, **kwargs):
-        return self.entity.exists(*args, **kwargs)
-
-    def get(self, *args, **kwargs):
-        return self.entity.get(*args, **kwargs)
-
-    def get_by_sql(self, *args, **kwargs):
-        return self.entity.get_by_sql(*args, **kwargs)
-
-    def get_for_update(self, *args, **kwargs):
-        return self.entity.get_for_update(*args, **kwargs)
-
-    def select(self, *args, **kwargs):
-        return self.entity.select(*args, **kwargs)
-
-    def select_by_sql(self, *args, **kwargs):
-        return self.entity.select_by_sql(*args, **kwargs)
-
-    def select_random(self, *args, **kwargs):
-        return self.entity.select_random(*args, **kwargs)
+    def __getattr__(self, item):
+        if item == 'entity':
+            raise AttributeError
+        return getattr(self.entity, item)
