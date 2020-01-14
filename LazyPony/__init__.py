@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  Copyright 2018, 2019 Ramil Nugmanov <stsouko@live.ru>
+#  Copyright 2018-2020 Ramil Nugmanov <stsouko@live.ru>
 #  This file is part of LazyPony.
 #
 #  LazyPony is free software; you can redistribute it and/or modify
@@ -17,8 +17,21 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
+from guppy import hpy
+from guppy.heapy import Path
 from pony.orm.core import Collection
 from warnings import warn
+
+
+hp = hpy()
+
+
+def replace(old, new):
+    """https://benkurtovic.com/2015/01/28/python-object-replacement.html"""
+    for path in hp.iso(old).pathsin:
+        relation = path.path[1]
+        if isinstance(relation, Path.R_INDEXVAL):
+            path.src.theone[relation.r] = new
 
 
 class LazyEntityMeta(type):
@@ -45,7 +58,8 @@ class LazyEntityMeta(type):
             for k, v in mcs._reverse[database].pop(name).items():
                 attrs[k] = v
 
-        entity = mcs._entities[database][name] = LazyEntity(parents, attrs)
+        entity = LazyEntity()
+        mcs._entities[database][name] = [parents, attrs, entity]
         return entity
 
     @classmethod
@@ -60,11 +74,12 @@ class LazyEntityMeta(type):
         class A(metaclass=LazyEntityMeta, database='db1'):
             pass
         """
-        for name, lazy in mcs._entities[database].items():
-            if hasattr(lazy, 'entity'):
-                raise RuntimeError('entity already attached')
+        try:
+            entities = mcs._entities.pop(database)
+        except KeyError:
+            raise ImportError(f'database definition not found or already attached')
 
-            attrs = lazy.__attrs__
+        for name, (parents, attrs, lazy) in entities.items():
             if schema:
                 if '_table_' in attrs:
                     if not isinstance(attrs['_table_'], tuple):  # if tuple: schema hardcoded
@@ -79,7 +94,8 @@ class LazyEntityMeta(type):
                         else:
                             warn('for many-to-many relationship if schema used NEED to define m2m table name')
 
-            lazy.entity = type(name, (db.Entity, *lazy.__parents__), attrs)
+            entity = type(name, (db.Entity, *parents), attrs)
+            replace(lazy, entity)
 
     _entities = {}
     _reverse = defaultdict(dict)
@@ -94,25 +110,7 @@ class DoubleLink:
 
 
 class LazyEntity:
-    __slots__ = ('__parents__', '__attrs__', 'entity')
+    """NOT ATTACHED ENTITY"""
 
-    def __init__(self, bases, attrs):
-        self.__parents__ = bases
-        self.__attrs__ = attrs
 
-    def __call__(self, *args, **kwargs):
-        return self.entity(*args, **kwargs)
-
-    def __getitem__(self, item):
-        return self.entity[item]
-
-    def __repr__(self):
-        return repr(self.entity)
-
-    def __str__(self):
-        return str(self.entity)
-
-    def __getattr__(self, item):
-        if item == 'entity':
-            raise AttributeError
-        return getattr(self.entity, item)
+__all__ = ['LazyEntityMeta']
