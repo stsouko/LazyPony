@@ -21,7 +21,7 @@ from pathlib import Path
 from setuptools import setup
 
 
-version = '0.3.0'
+version = '0.3.1'
 
 
 setup(
@@ -33,7 +33,7 @@ setup(
     author='Dr. Ramil Nugmanov',
     author_email='stsouko@live.ru',
     python_requires='>=3.6.7',
-    install_requires=['pony>=0.7.9'],
+    install_requires=['pony>=0.7.9', 'guppy3>=3.0.9'],
     long_description=(Path(__file__).parent / 'README.md').open().read(),
     classifiers=['Environment :: Plugins',
                  'Intended Audience :: Developers',

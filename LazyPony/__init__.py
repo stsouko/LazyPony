@@ -23,17 +23,6 @@ from pony.orm.core import Collection
 from warnings import warn
 
 
-hp = hpy()
-
-
-def replace(old, new):
-    """https://benkurtovic.com/2015/01/28/python-object-replacement.html"""
-    for path in hp.iso(old).pathsin:
-        relation = path.path[1]
-        if isinstance(relation, Path.R_INDEXVAL):
-            path.src.theone[relation.r] = new
-
-
 class LazyEntityMeta(type):
     def __new__(mcs, name, parents, attrs, database=None):
         if database not in mcs._entities:
@@ -79,6 +68,8 @@ class LazyEntityMeta(type):
         except KeyError:
             raise ImportError(f'database definition not found or already attached')
 
+        hp = hpy()
+
         for name, (parents, attrs, lazy) in entities.items():
             if schema:
                 if '_table_' in attrs:
@@ -95,7 +86,11 @@ class LazyEntityMeta(type):
                             warn('for many-to-many relationship if schema used NEED to define m2m table name')
 
             entity = type(name, (db.Entity, *parents), attrs)
-            replace(lazy, entity)
+            # https://benkurtovic.com/2015/01/28/python-object-replacement.html
+            for path in hp.iso(lazy).pathsin:
+                relation = path.path[1]
+                if isinstance(relation, Path.R_INDEXVAL):
+                    path.src.theone[relation.r] = entity
 
     _entities = {}
     _reverse = defaultdict(dict)
@@ -113,4 +108,4 @@ class LazyEntity:
     """NOT ATTACHED ENTITY"""
 
 
-__all__ = ['LazyEntityMeta']
+__all__ = ['LazyEntityMeta', 'DoubleLink']
