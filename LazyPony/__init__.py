@@ -35,12 +35,14 @@ class LazyEntityMeta(type):
             if isinstance(v, DoubleLink):
                 r = v.reverse
                 v = v.attr
-                if v.py_type in mcs._entities[database]:
-                    mcs._entities[database][v.py_type].__attrs__[v.reverse] = r
-                elif v.py_type in mcs._reverse[database]:
-                    mcs._reverse[database][v.py_type][v.reverse] = r
+                reverse = v.reverse
+                py_type = v.py_type
+                if py_type in mcs._entities[database]:
+                    mcs._entities[database][py_type][1][reverse] = r
+                elif py_type in mcs._reverse[database]:
+                    mcs._reverse[database][py_type][reverse] = r
                 else:
-                    mcs._reverse[database][v.py_type] = {v.reverse: r}
+                    mcs._reverse[database][py_type] = {reverse: r}
                 attrs[k] = v
 
         if name in mcs._reverse[database]:
